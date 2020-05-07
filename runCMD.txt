@@ -1,0 +1,18 @@
+activate n2n-nv
+e:
+cd E:\code\svm\object-detector\object-detector
+
+# extract-features
+python extract-features.py -p ../data/images/pos -n ../data/images/neg -d HOG
+
+# train-classifier
+python train-classifier.py -p ../data/features/pos -n ../data/features/neg 
+
+# test-classifier
+python test-classifier.py -i ../data/images/test-11.png
+
+error 1 - imread skimage.io an unexpected keyword argument 'as_grey'
+fix - as_grey to as_gray
+
+error 2 - hog Selected block normalization method is invalid.
+fix - normalize(depracated) to block_norm='L1', remove visualize

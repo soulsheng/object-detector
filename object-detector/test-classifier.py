@@ -7,6 +7,7 @@ import cv2
 import argparse as ap
 from nms import nms
 from config import *
+import numpy as np
 
 def sliding_window(image, window_size, step_size):
     '''
@@ -25,8 +26,8 @@ def sliding_window(image, window_size, step_size):
     * y is the top-left y co-ordinate
     * im_window is the sliding window image
     '''
-    for y in xrange(0, image.shape[0], step_size[1]):
-        for x in xrange(0, image.shape[1], step_size[0]):
+    for y in range(0, image.shape[0], step_size[1]):
+        for x in range(0, image.shape[1], step_size[0]):
             yield (x, y, image[y:y + window_size[1], x:x + window_size[0]])
 
 if __name__ == "__main__":
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
 
     # Read the image
-    im = imread(args["image"], as_grey=False)
+    im = imread(args["image"], as_gray=False)
     min_wdw_sz = (100, 40)
     step_size = (10, 10)
     downscale = args['downscale']
@@ -65,12 +66,13 @@ if __name__ == "__main__":
             if im_window.shape[0] != min_wdw_sz[1] or im_window.shape[1] != min_wdw_sz[0]:
                 continue
             # Calculate the HOG features
-            fd = hog(im_window, orientations, pixels_per_cell, cells_per_block, visualize, normalize)
-            pred = clf.predict(fd)
+            fd = hog(im_window, orientations, pixels_per_cell, cells_per_block, block_norm='L1')
+            fd_new = np.array(fd).reshape(1, -1)
+            pred = clf.predict(fd_new)
             if pred == 1:
-                print  "Detection:: Location -> ({}, {})".format(x, y)
-                print "Scale ->  {} | Confidence Score {} \n".format(scale,clf.decision_function(fd))
-                detections.append((x, y, clf.decision_function(fd),
+                print(  "Detection:: Location -> ({}, {})".format(x, y) )
+                print( "Scale ->  {} | Confidence Score {} \n".format(scale,clf.decision_function(fd_new)) )
+                detections.append((x, y, clf.decision_function(fd_new),
                     int(min_wdw_sz[0]*(downscale**scale)),
                     int(min_wdw_sz[1]*(downscale**scale))))
                 cd.append(detections[-1])
