@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     # Read the image
     im = imread(args["image"], as_gray=False)
-    min_wdw_sz = (100, 40)
+    min_wdw_sz = (160, 160)
     step_size = (10, 10)
     downscale = args['downscale']
     visualize_det = args['visualize']

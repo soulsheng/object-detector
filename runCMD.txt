@@ -2,6 +2,7 @@ activate n2n-nv
 e:
 cd E:\code\svm\object-detector\object-detector
 
+data1 uuic car
 # extract-features
 python extract-features.py -p ../data/images/pos -n ../data/images/neg -d HOG
 
@@ -10,6 +11,11 @@ python train-classifier.py -p ../data/features/pos -n ../data/features/neg
 
 # test-classifier
 python test-classifier.py -i ../data/images/test-11.png
+
+data2 mask face
+python extract-features.py -p ../data/train-mask-face/pos -n ../data/train-mask-face/neg -d HOG
+python train-classifier.py -p ../data/features/pos -n ../data/features/neg 
+python test-classifier.py -i ../data/images/test_00000102.jpg
 
 error 1 - imread skimage.io an unexpected keyword argument 'as_grey'
 fix - as_grey to as_gray

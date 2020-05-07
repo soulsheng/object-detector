@@ -64,3 +64,5 @@ data/features
 *~
 *.swp
 /data/images
+data/features*
+data/train*
