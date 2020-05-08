@@ -36,7 +36,9 @@ if __name__ == "__main__":
   parser.add_argument('-i', "--image", help="Path to the test image", required=True)
   parser.add_argument('-o', "--output", help="Path to the output image", required=True)
   parser.add_argument('-d','--downscale', help="Downscale ratio", default=1.25,
-            type=int)
+            type=float)
+  parser.add_argument('-t', '--threshold', help="threshold of confidence score", default=0.6,
+            type=float)
   parser.add_argument('-v', '--visualize', help="Visualize the sliding window",
             action="store_true")
   parser.add_argument('-s', '--show', help="Show result image",
@@ -45,7 +47,7 @@ if __name__ == "__main__":
             action="store_true")
              
   args = vars(parser.parse_args())
-
+  thresh_score = args["threshold"]
   output_path = args["output"]
   img_path = args["image"]
   
@@ -55,7 +57,11 @@ if __name__ == "__main__":
    img_files.append(img_path)
   else : # path
    img_files = glob.glob(img_path + '/*')
-   
+
+  dicNeg = {}
+  dicPos = {}
+  dicMinMax = {"min": 5, "max": -5}
+
   for img_file in img_files :
     # Read the image
     filepath,fullflname = os.path.split(img_file)
@@ -98,7 +104,7 @@ if __name__ == "__main__":
             pred = clf.predict(fd_new)
             print("predict Time=%.3f"%(time.clock()-st))
             
-            if pred == 1:
+            if 1: # pred == 1:
                 print(  "Detection:: Location -> ({}, {})".format(x, y) )
                 print( "Scale ->  {} | Confidence Score {} \n".format(scale,clf.decision_function(fd_new)) )
                 detections.append((x, y, clf.decision_function(fd_new),
@@ -123,9 +129,10 @@ if __name__ == "__main__":
     # Display the results before performing NMS
     clone = im_color.copy()
     for (x_tl, y_tl, _, w, h) in detections:
+      if bShow:
         # Draw the detections
         cv2.rectangle(clone, (x_tl, y_tl), (x_tl+w, y_tl+h), (0, 0, 0), thickness=2)
-    if bShow:    
+
         cv2.imshow("Raw Detections before NMS", clone)
         cv2.waitKey()
 
@@ -136,16 +143,39 @@ if __name__ == "__main__":
     clone = im_color.copy()
     for (x_tl, y_tl, score, w, h) in detections:
         # Draw the detections
-        cv2.rectangle(clone, (x_tl, y_tl), (x_tl+w,y_tl+h), (0, 0, 0), thickness=2)
-        if score > 0.8:
-            cv2.putText(clone, 'mask', (40,40), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0))
+        if score > thresh_score:
+            type_str = 'mask'
+            type_clr = (0, 255, 0)
+            dicPos[fname] = score
         else:
-            cv2.putText(clone, 'no mask', (10,40), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
-        cv2.putText(clone, '%.2f'%score, (100,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 3)
+            type_str = 'no mask'
+            type_clr = (0, 0, 255)
+            dicNeg[fname] = score
+        if bShow:
+          cv2.rectangle(clone, (x_tl, y_tl), (x_tl + w, y_tl + h), (0, 0, 0), thickness=2)
+          cv2.putText(clone, type_str, (10, 40), cv2.FONT_HERSHEY_COMPLEX, 1, type_clr, 2)
+          cv2.putText(clone, '%.2f'%score, (80,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 2)
+
+        if score > dicMinMax["max"]:
+            dicMinMax["max"] = score
+        if score < dicMinMax["min"]:
+            dicMinMax["min"] = score
+
     if bShow:
         cv2.imshow("Final Detections after applying NMS", clone)
         cv2.waitKey()
     if bWrite:
         out_name = output_path + fname + ext
         print( out_name )
-        cv2.imwrite(out_name, clone) 
+        cv2.imwrite(out_name, clone)
+
+  if len(dicNeg) > len(dicPos)  :
+      dic = dicPos
+  else:
+      dic = dicNeg
+
+  for key in dic:
+     print("%s:%.2f"%(key, dic[key] ) )
+
+  for key in dicMinMax:
+     print("%s:%.2f"%(key, dicMinMax[key] ) )

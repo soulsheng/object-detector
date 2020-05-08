@@ -23,3 +23,14 @@ fix - as_grey to as_gray
 
 error 2 - hog Selected block normalization method is invalid.
 fix - normalize(depracated) to block_norm='L1', remove visualize
+
+     train      test 
+     neg  pos   neg  pos
+min:-3.59 0.50       
+max:-0.25 4.65       
+
+for train, precdict 100% right when thresh_score=0
+pos<0.6, 2/718; pos<0.5, 0/718;
+neg>0, 0/1310;
+usv0914:0.55
+usv1450:0.50
