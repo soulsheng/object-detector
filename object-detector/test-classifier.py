@@ -1,9 +1,9 @@
 # Import the required modules
 from skimage.transform import pyramid_gaussian
-from skimage.io import imread
+from skimage.io import imread, imshow
 from skimage.feature import hog
 from sklearn.externals import joblib
-import cv2
+import cv2, time, os, glob
 import argparse as ap
 from nms import nms
 from config import *
@@ -32,20 +32,43 @@ def sliding_window(image, window_size, step_size):
 
 if __name__ == "__main__":
     # Parse the command line arguments
-    parser = ap.ArgumentParser()
-    parser.add_argument('-i', "--image", help="Path to the test image", required=True)
-    parser.add_argument('-d','--downscale', help="Downscale ratio", default=1.25,
+  parser = ap.ArgumentParser()
+  parser.add_argument('-i', "--image", help="Path to the test image", required=True)
+  parser.add_argument('-o', "--output", help="Path to the output image", required=True)
+  parser.add_argument('-d','--downscale', help="Downscale ratio", default=1.25,
             type=int)
-    parser.add_argument('-v', '--visualize', help="Visualize the sliding window",
+  parser.add_argument('-v', '--visualize', help="Visualize the sliding window",
             action="store_true")
-    args = vars(parser.parse_args())
+  parser.add_argument('-s', '--show', help="Show result image",
+            action="store_true")
+  parser.add_argument('-w', '--write', help="Write result image",
+            action="store_true")
+             
+  args = vars(parser.parse_args())
 
+  output_path = args["output"]
+  img_path = args["image"]
+  
+  img_files =[]
+  
+  if os.path.isfile(img_path) :
+   img_files.append(img_path)
+  else : # path
+   img_files = glob.glob(img_path + '/*')
+   
+  for img_file in img_files :
     # Read the image
-    im = imread(args["image"], as_gray=False)
+    filepath,fullflname = os.path.split(img_file)
+    fname,ext = os.path.splitext(fullflname)
+
+    im_color = cv2.imread(img_file)
+    im = imread(img_file, as_gray=False)
     min_wdw_sz = (160, 160)
     step_size = (10, 10)
     downscale = args['downscale']
     visualize_det = args['visualize']
+    bShow = args['show']
+    bWrite = args['write']
 
     # Load the classifier
     clf = joblib.load(model_path)
@@ -66,9 +89,15 @@ if __name__ == "__main__":
             if im_window.shape[0] != min_wdw_sz[1] or im_window.shape[1] != min_wdw_sz[0]:
                 continue
             # Calculate the HOG features
+            st = time.clock()
             fd = hog(im_window, orientations, pixels_per_cell, cells_per_block, block_norm='L1')
+            print("HOG Time=%.3f"%(time.clock()-st))
+            
+            st = time.clock()
             fd_new = np.array(fd).reshape(1, -1)
             pred = clf.predict(fd_new)
+            print("predict Time=%.3f"%(time.clock()-st))
+            
             if pred == 1:
                 print(  "Detection:: Location -> ({}, {})".format(x, y) )
                 print( "Scale ->  {} | Confidence Score {} \n".format(scale,clf.decision_function(fd_new)) )
@@ -92,19 +121,31 @@ if __name__ == "__main__":
         scale+=1
 
     # Display the results before performing NMS
-    clone = im.copy()
+    clone = im_color.copy()
     for (x_tl, y_tl, _, w, h) in detections:
         # Draw the detections
-        cv2.rectangle(im, (x_tl, y_tl), (x_tl+w, y_tl+h), (0, 0, 0), thickness=2)
-    cv2.imshow("Raw Detections before NMS", im)
-    cv2.waitKey()
+        cv2.rectangle(clone, (x_tl, y_tl), (x_tl+w, y_tl+h), (0, 0, 0), thickness=2)
+    if bShow:    
+        cv2.imshow("Raw Detections before NMS", clone)
+        cv2.waitKey()
 
     # Perform Non Maxima Suppression
     detections = nms(detections, threshold)
 
     # Display the results after performing NMS
-    for (x_tl, y_tl, _, w, h) in detections:
+    clone = im_color.copy()
+    for (x_tl, y_tl, score, w, h) in detections:
         # Draw the detections
         cv2.rectangle(clone, (x_tl, y_tl), (x_tl+w,y_tl+h), (0, 0, 0), thickness=2)
-    cv2.imshow("Final Detections after applying NMS", clone)
-    cv2.waitKey()
+        if score > 0.8:
+            cv2.putText(clone, 'mask', (40,40), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0))
+        else:
+            cv2.putText(clone, 'no mask', (10,40), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255))
+        cv2.putText(clone, '%.2f'%score, (100,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 3)
+    if bShow:
+        cv2.imshow("Final Detections after applying NMS", clone)
+        cv2.waitKey()
+    if bWrite:
+        out_name = output_path + fname + ext
+        print( out_name )
+        cv2.imwrite(out_name, clone) 
