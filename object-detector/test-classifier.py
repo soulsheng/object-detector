@@ -1,5 +1,5 @@
 # Import the required modules
-from skimage.transform import pyramid_gaussian
+from skimage.transform import pyramid_gaussian,resize
 from skimage.io import imread, imshow
 from skimage.feature import hog
 from sklearn.externals import joblib
@@ -69,7 +69,12 @@ if __name__ == "__main__":
 
     im_color = cv2.imread(img_file)
     im = imread(img_file, as_gray=False)
-    min_wdw_sz = (160, 160)
+    min_wdw_sz = (96, 96)
+    #imshow(im)
+    im = resize(im, min_wdw_sz)
+    #imshow(im)
+    #print( img_file )
+    #exit(10)
     step_size = (10, 10)
     downscale = args['downscale']
     visualize_det = args['visualize']
@@ -143,6 +148,7 @@ if __name__ == "__main__":
     clone = im_color.copy()
     for (x_tl, y_tl, score, w, h) in detections:
         # Draw the detections
+        cv2.rectangle(clone, (x_tl, y_tl), (x_tl + w, y_tl + h), (0, 0, 0), thickness=2)
         if score > thresh_score:
             type_str = 'mask'
             type_clr = (0, 255, 0)
@@ -151,10 +157,9 @@ if __name__ == "__main__":
             type_str = 'no mask'
             type_clr = (0, 0, 255)
             dicNeg[fname] = score
-        if bShow:
-          cv2.rectangle(clone, (x_tl, y_tl), (x_tl + w, y_tl + h), (0, 0, 0), thickness=2)
-          cv2.putText(clone, type_str, (10, 40), cv2.FONT_HERSHEY_COMPLEX, 1, type_clr, 2)
-          cv2.putText(clone, '%.2f'%score, (80,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 2)
+
+        cv2.putText(clone, type_str, (10, 40), cv2.FONT_HERSHEY_COMPLEX, 1, type_clr, 2)
+        cv2.putText(clone, '%.2f'%score, (60,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 2)
 
         if score > dicMinMax["max"]:
             dicMinMax["max"] = score
@@ -176,6 +181,7 @@ if __name__ == "__main__":
 
   for key in dic:
      print("%s:%.2f"%(key, dic[key] ) )
+  print(" miss count = %d"%( len(dic) ) )
 
   for key in dicMinMax:
      print("%s:%.2f"%(key, dicMinMax[key] ) )

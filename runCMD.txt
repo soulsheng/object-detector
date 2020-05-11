@@ -24,13 +24,56 @@ fix - as_grey to as_gray
 error 2 - hog Selected block normalization method is invalid.
 fix - normalize(depracated) to block_norm='L1', remove visualize
 
+
+
+-------------------------------------------------------------
+train data set from aizoo
+
+error rate
+    tr160  te160-1  te160-2 tr48   te48   tr96   te96    test-3-96 
+neg  4         36     36    167     28      51     39    157 
+pos  8         105    84    269     94      67     73    65 
+mix  0.25%  10.3%    8.9%   9.2     9.1%   2.5%   8.3%   11% 
+
+    train test-1  test-2   test-3
+neg 2907  722     722      1311
+pos 1836  643    622       713 
+
+ms      160    96    48 
+t-hog   10-20  4-8   1-2
+t-pred  1      <1    <1
+
+-------------------------------------------------------------
+train data set from wuhan
+
      train      test 
      neg  pos   neg  pos
-min:-3.59 0.50       
-max:-0.25 4.65       
+min:-3.59 0.50       -1.52     
+max:-0.25 4.65       3.64     
 
 for train, precdict 100% right when thresh_score=0
 pos<0.6, 2/718; pos<0.5, 0/718;
 neg>0, 0/1310;
 usv0914:0.55
 usv1450:0.50
+
+
+mar   0    32
+test  te0  te32
+train tr0  tr32
+
+tr32-te0-s160:
+<0.2 130/644
+<0	 
+pos: 85/643=13% miss 
+
+tr0-te0-s160:
+<0.2 126/644
+<0	 
+pos: 82/643=13% miss 
+neg: 128/722=18% miss  (-2.72,2.07)
+
+tr0-te0-s48:
+<0	 
+pos: 111/643=17% miss 
+neg:  95/722=13% miss  (-2.66,1.37) 
