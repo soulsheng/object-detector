@@ -3,7 +3,7 @@ from skimage.transform import pyramid_gaussian,resize
 from skimage.io import imread, imshow
 from skimage.feature import hog
 from sklearn.externals import joblib
-import cv2, time, os, glob
+import cv2, time, os, glob, shutil
 import argparse as ap
 from nms import nms
 from config import *
@@ -37,7 +37,7 @@ if __name__ == "__main__":
   parser.add_argument('-o', "--output", help="Path to the output image", required=True)
   parser.add_argument('-d','--downscale', help="Downscale ratio", default=1.25,
             type=float)
-  parser.add_argument('-t', '--threshold', help="threshold of confidence score", default=0.6,
+  parser.add_argument('-t', '--threshold', help="threshold of confidence score", default=0.0,
             type=float)
   parser.add_argument('-v', '--visualize', help="Visualize the sliding window",
             action="store_true")
@@ -57,6 +57,18 @@ if __name__ == "__main__":
    img_files.append(img_path)
   else : # path
    img_files = glob.glob(img_path + '/*')
+
+  # output path
+  if not os.path.exists(output_path):
+      os.makedirs( output_path )
+  out_dir_neg = output_path + '/neg'
+  out_dir_pos = output_path + '/pos'
+  if os.path.exists(out_dir_neg):
+       shutil.rmtree(out_dir_neg)
+  os.mkdir(out_dir_neg)
+  if os.path.exists(out_dir_pos):
+       shutil.rmtree(out_dir_pos)
+  os.mkdir(out_dir_pos)
 
   dicNeg = {}
   dicPos = {}
@@ -148,15 +160,17 @@ if __name__ == "__main__":
     clone = im_color.copy()
     for (x_tl, y_tl, score, w, h) in detections:
         # Draw the detections
-        cv2.rectangle(clone, (x_tl, y_tl), (x_tl + w, y_tl + h), (0, 0, 0), thickness=2)
+        #cv2.rectangle(clone, (x_tl, y_tl), (x_tl + w, y_tl + h), (0, 0, 0), thickness=2)
         if score > thresh_score:
             type_str = 'mask'
             type_clr = (0, 255, 0)
             dicPos[fname] = score
+            output_path_sub = out_dir_pos
         else:
             type_str = 'no mask'
             type_clr = (0, 0, 255)
             dicNeg[fname] = score
+            output_path_sub = out_dir_neg
 
         cv2.putText(clone, type_str, (10, 40), cv2.FONT_HERSHEY_COMPLEX, 1, type_clr, 2)
         cv2.putText(clone, '%.2f'%score, (60,140), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 2)
@@ -170,7 +184,7 @@ if __name__ == "__main__":
         cv2.imshow("Final Detections after applying NMS", clone)
         cv2.waitKey()
     if bWrite:
-        out_name = output_path + fname + ext
+        out_name = output_path_sub + '/' + fname + ext
         print( out_name )
         cv2.imwrite(out_name, clone)
 
@@ -179,8 +193,13 @@ if __name__ == "__main__":
   else:
       dic = dicNeg
 
+  miss_dir = img_path + '../miss'
+  if os.path.exists( miss_dir ):
+      shutil.rmtree( miss_dir )
+  os.mkdir( miss_dir )
   for key in dic:
      print("%s:%.2f"%(key, dic[key] ) )
+     shutil.copy( img_path + key + ext, miss_dir)
   print(" miss count = %d"%( len(dic) ) )
 
   for key in dicMinMax:
